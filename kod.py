@@ -5,6 +5,9 @@ from matplotlib.ticker import ScalarFormatter
 
 def main():
 
+    #wybor metody numerycznej
+    metoda = input("Podaj rodzaj metody numerycznej, RK2 lub RK4: ")
+
     #parametry rownania
     c = 1.0
     k = 25
@@ -18,51 +21,61 @@ def main():
     F4 = np.linspace(100, 1000, 10)
     F = np.concatenate((F1, F2, F3, F4))
 
+    #przykładowa f
+    F_value = F[21] 
+
     #warunki poczatkowe
     position0 = 0
     velocity0 = 0
 
-    #wybor metody numerycznej
-    metoda = input("Podaj rodzaj metody numerycznej, RK2 lub RK4: ")
-    
     #czas symulacji
+    t_end = 10
     krok = np.array([0.5,0.25,0.1,0.05])
-    
+
+    #liczenie metody referencyjnej tylko raz, z najdokładniejszym krokiem
+    #potem, przy porównywaniu będziemy tylko interpolować rozwiązanie w 
+    #wybranych momentach czasu
+    N_ref = int(t_end / krok[-1] + 1)
+    t_ref = np.linspace(0, t_end, N_ref)
+    print(f'liczenie... metoda referencyjna, F={F_value:.3f}')
+    x_ref = scipy.integrate.solve_ivp(
+    system,
+        (0, t_end),
+        [position0, velocity0],
+        args=(c, k, F_value, omega),
+        t_eval=t_ref,
+        method='RK45',
+        max_step=1e-4
+    )
+    x1_ref = x_ref.y[0]
+    x2_ref = x_ref.y[1]
+
     #tablica bledow dla kazdego kroku
     E = np.empty(np.size(krok))
+
+    plot_phaseplane(x1_ref,x2_ref)
     
     for index,h in enumerate(krok):
-        t_end = 10
-        N = int(t_end/h + 1)
-        t = np.linspace(0,t_end,N)
-
-        #rozwiazanie referencyjne
-        print(f'liczenie... metoda referencyjna, krok={h}, F={F[21]:.3f}')
-        x_ref = scipy.integrate.solve_ivp(
-            system,
-            (0,t_end),
-            [position0,velocity0],
-            args=(c,k,F[21],omega),
-            t_eval = t,
-            method='RK45',
-            max_step=1e-4
-        )
-
-        x1_ref = x_ref.y[0]
-        x2_ref = x_ref.y[1]
+        #tutaj liczymy momenty czasu występujące przy zadanym kroku
+        N = int(t_end / h + 1)
+        t = np.linspace(0, t_end, N)
+        momenty = np.searchsorted(t_ref, t)
+        # i wybieramy z rozwiązania referencyjnego te wybrane momenty
+        x1 = x1_ref[momenty]
+        x2 = x2_ref[momenty]
 
         if metoda == "RK2":
-            x1_num, x2_num = MojRK2(t_end, c, k, omega, F[21], h, position0, velocity0)
+            x1_num, x2_num = MojRK2(t_end, c, k, omega, F_value, h, position0, velocity0)
         elif metoda == "RK4":
-            x1_num, x2_num = MojRK4(t_end, c, k, omega, F[21], h, position0, velocity0)
+            x1_num, x2_num = MojRK4(t_end, c, k, omega, F_value, h, position0, velocity0)
         else:
             print("Bledna metoda")
             break
 
         #wykres aktualnego rozwiazania
-        plot_x(x1_ref,x1_num,t,h,metoda)
-        
-        E[index] = np.max(np.abs(x1_ref-x1_num))
+        plot_x(x1,x1_num,t,h,metoda)
+        #zapis błędu dla wybranego kroku
+        E[index] = np.max(np.abs(x1-x1_num))
 
     plot_E(E,krok,metoda)
 
@@ -176,7 +189,19 @@ def plot_E(E,krok,metoda):
     plt.close()
     return 0
 
-def plot_phaseplane():
+def plot_phaseplane(x, dx_dt):
+    plt.figure(figsize=(10, 6))
+    plt.plot(x, dx_dt, label=f'trajektora_fazowa', linestyle='-')
+    plt.xlabel('położenie x')
+    plt.ylabel('prędkość dx_dt')
+
+    plt.grid(True, linestyle='--', alpha=0.7)
+    plt.title(f'trajektoria fazowa (x,dx_dt)')
+
+    opis = 'wykres_trajektorii_fazowej.png'
+    path = 'wykresy/' + opis
+    plt.savefig(path, bbox_inches='tight')
+    plt.close()
     return 0
 
 
