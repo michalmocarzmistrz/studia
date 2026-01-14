@@ -20,31 +20,53 @@ def main():
     #warunki poczatkowe
     position0 = 0
     velocity0 = 0
+
+    #wybor metody numerycznej
+    metoda = input("Podaj rodzaj metody numerycznej, RK2 lub RK4: ")
     
     #czas symulacji
     krok = np.array([0.5,0.25,0.1,0.05])
-    t_end = 10
-    N = int(t_end/krok[2] + 1)
-    t = np.linspace(0,t_end,N)
+    
+    #tablica bledow dla kazdego kroku
+    E = np.empty(np.size(krok))
+    
+    for index,h in enumerate(krok):
+        t_end = 10
+        N = int(t_end/h + 1)
+        t = np.linspace(0,t_end,N)
 
-    x_ref = scipy.integrate.solve_ivp(
-        system,
-        (0,t_end),
-        [position0,velocity0],
-        args=(c,k,F[21],omega),
-        t_eval = t,
-        method='RK45',
-        max_step=1e-4
-    )
+        #rozwiazanie referencyjne
+        x_ref = scipy.integrate.solve_ivp(
+            system,
+            (0,t_end),
+            [position0,velocity0],
+            args=(c,k,F[21],omega),
+            t_eval = t,
+            method='RK45',
+            max_step=1e-4
+        )
 
-    x1_ref = x_ref.y[0]
-    x2_ref = x_ref.y[1]
+        x1_ref = x_ref.y[0]
+        x2_ref = x_ref.y[1]
 
-    print(x1_ref)
+        print(x1_ref)
 
-    x1_num,x2_num = MojRK4(t_end,c,k,omega,F[21],krok[2],position0,velocity0)
+        if metoda == "RK2":
+            x1_num, x2_num = MojRK2(t_end, c, k, omega, F[21], h, position0, velocity0)
+        elif metoda == "RK4":
+            x1_num, x2_num = MojRK4(t_end, c, k, omega, F[21], h, position0, velocity0)
+        else:
+            print("Bledna metoda")
+            break
 
-    print(x1_num)
+
+        E[index] = np.max(np.abs(x1_ref-x1_num))
+
+        print(x1_num)
+        print(E[index])
+
+    plot_E(E,krok,metoda)
+
 
 def system(t, stan, c, k, F, omega):
     x1, x2 = stan
@@ -104,6 +126,34 @@ def f1(x2):
 
 def f2(x1,x2,t,c,k,omega,F):
     return -c*x2 - k*x1 + F*np.sin(omega*t)
+
+def plot_x():
+    return 0
+
+def plot_E(E,krok,metoda):
+    plt.figure(figsize=(10, 6))
+    plt.plot(krok, E, label=f'{metoda}: x1', marker='x', linestyle='')
+    plt.xlabel('krok')
+    plt.ylabel('blad E')
+
+    #skala logarytmiczna
+    plt.yscale('log')
+    plt.xscale('log')
+
+    #dodaj znaczniki na osi poziomej w każdym kroku
+    plt.xticks(krok, [f'{h}' for h in krok])
+
+    plt.grid(True, linestyle='--', alpha=0.7)
+    plt.title(f'wykres błędu bezwzględnego E od kroku h, metoda {metoda}')
+
+    opis = 'wykres_bledu_' + metoda + ".png"
+    path = 'wykresy/' + opis
+    plt.savefig(path, bbox_inches='tight')
+    plt.close()
+    return 0
+
+def plot_phaseplane():
+    return 0
 
 
 
