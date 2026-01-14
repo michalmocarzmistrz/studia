@@ -1,6 +1,7 @@
 import numpy as np
 import scipy
 import matplotlib.pyplot as plt
+from matplotlib.ticker import ScalarFormatter
 
 def main():
 
@@ -36,6 +37,7 @@ def main():
         t = np.linspace(0,t_end,N)
 
         #rozwiazanie referencyjne
+        print(f'liczenie... metoda referencyjna, krok={h}, F={F[21]:.3f}')
         x_ref = scipy.integrate.solve_ivp(
             system,
             (0,t_end),
@@ -49,8 +51,6 @@ def main():
         x1_ref = x_ref.y[0]
         x2_ref = x_ref.y[1]
 
-        print(x1_ref)
-
         if metoda == "RK2":
             x1_num, x2_num = MojRK2(t_end, c, k, omega, F[21], h, position0, velocity0)
         elif metoda == "RK4":
@@ -59,11 +59,10 @@ def main():
             print("Bledna metoda")
             break
 
-
+        #wykres aktualnego rozwiazania
+        plot_x(x1_ref,x1_num,t,h,metoda)
+        
         E[index] = np.max(np.abs(x1_ref-x1_num))
-
-        print(x1_num)
-        print(E[index])
 
     plot_E(E,krok,metoda)
 
@@ -75,6 +74,7 @@ def system(t, stan, c, k, F, omega):
     return [dx1dt, dx2dt]
 
 def MojRK2(t_end,c,k,omega,F,h,position0,velocity0):
+    print(f'liczenie... RK2, krok={h}, F={F:.3f}')
     N = int(t_end/h + 1)
     t = np.linspace(0,t_end,N)
 
@@ -97,6 +97,7 @@ def MojRK2(t_end,c,k,omega,F,h,position0,velocity0):
 
 
 def MojRK4(t_end,c,k,omega,F,h,position0,velocity0):
+    print(f'liczenie... RK4, krok={h}, F={F:.3f}')
     N = int(t_end/h + 1)
     t = np.linspace(0,t_end,N)
 
@@ -127,9 +128,32 @@ def f1(x2):
 def f2(x1,x2,t,c,k,omega,F):
     return -c*x2 - k*x1 + F*np.sin(omega*t)
 
-def plot_x():
+#wykres x(t) porownany z rozwiazaniem referencyjnym
+def plot_x(x_ref,x_num,t,krok,metoda):
+    plt.figure(figsize=(10, 6))
+    plt.plot(t, x_ref, label=f'Rozwiązanie referencyjne (solve_ivp)', linestyle='--',color='blue')
+    plt.plot(t, x_num, label=f'Rozwiazanie numeryczne', linestyle='-',color='red')
+    plt.xlabel('czas [t]')
+    plt.ylabel('x(t)')
+    plt.legend()
+
+    #dla rozwiazan niestabilnych wartosci na osi pionowej sa zbyt duze
+    #dodaję notację wykładniczą na górze wykresu
+    ax = plt.gca()
+    ax.yaxis.set_major_formatter(ScalarFormatter(useMathText=True))
+
+
+    plt.grid(True, linestyle='--', alpha=0.7)
+    plt.title(f'Porównanie rozwiązań, metoda {metoda}, krok {krok}')
+
+
+    opis = 'rozwiazanie_' + metoda + '_' + str(krok) + '.png'
+    path = 'wykresy/' + opis
+    plt.savefig(path, bbox_inches='tight')
+    plt.close()
     return 0
 
+# wykres bledu
 def plot_E(E,krok,metoda):
     plt.figure(figsize=(10, 6))
     plt.plot(krok, E, label=f'{metoda}: x1', marker='x', linestyle='')
