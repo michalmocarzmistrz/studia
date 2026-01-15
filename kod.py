@@ -1,9 +1,13 @@
 import numpy as np
 import scipy
 import matplotlib.pyplot as plt
+import os
 from matplotlib.ticker import ScalarFormatter
 
 def main():
+
+    #folder na wykresys
+    os.makedirs("wykresy", exist_ok=True)
 
     #wybor metody numerycznej
     metoda = input("Podaj rodzaj metody numerycznej, RK2 lub RK4: ")
@@ -12,6 +16,8 @@ def main():
     c = 1.0
     k = 25
     omega = 10
+
+    #czestotliwosc wlasna omega_n = sqrt(k) = 5
 
     #rozwiazujemy rownanie dla wielu F0 z zakresu [0,1000]
     #tworzenie wektora F ze zmienna gestoscia w kolejnych przedzialach
@@ -22,7 +28,7 @@ def main():
     F = np.concatenate((F1, F2, F3, F4))
 
     #przykładowa f
-    F_value = F[21] 
+    F_value = F[21]
 
     #warunki poczatkowe
     position0 = 0
@@ -203,7 +209,6 @@ def plot_phaseplane(x, dx_dt):
     plt.savefig(path, bbox_inches='tight')
     plt.close()
     return 0
-
 
 
 if __name__ == "__main__":
