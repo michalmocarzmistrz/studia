@@ -6,8 +6,11 @@ from matplotlib.ticker import ScalarFormatter
 
 def main():
 
-    #folder na wykresys
+    #folder na wykresy
     os.makedirs("wykresy", exist_ok=True)
+    os.makedirs("wykresy_omega_n", exist_ok=True)
+    os.makedirs("wykresy_F", exist_ok=True)
+
 
     #wybor metody numerycznej
     metoda = input("Podaj rodzaj metody numerycznej, RK2 lub RK4: ")
@@ -28,7 +31,7 @@ def main():
     F = np.concatenate((F1, F2, F3, F4))
 
     #przykładowa f
-    F_value = F[21]
+    F_value = 10
 
     #warunki poczatkowe
     position0 = 0
@@ -84,6 +87,37 @@ def main():
         E[index] = np.max(np.abs(x1-x1_num))
 
     plot_E(E,krok,metoda)
+
+    pytanie = input("Czy liczyc zaleznosc E(F)? (bardzo dlugo) \"TAK\": ")
+    
+    if pytanie != "TAK":
+        print("koniec..")
+        return
+
+    #tablica bledow dla kazdej sily wymuszajacej
+    E_F = np.empty(np.size(F))
+    
+    for index,F_value in enumerate(F):
+        N = int(t_end / krok[-1] + 1)
+        t = np.linspace(0, t_end, N)
+        print(f'liczenie... metoda referencyjna, F={F_value:.3f}')
+        x_ref = scipy.integrate.solve_ivp(
+        system,
+            (0, t_end),
+            [position0, velocity0],
+            args=(c, k, F_value, omega),
+            t_eval=t_ref,
+            method='RK45',
+            max_step=1e-4
+        )
+        x1 = x_ref.y[0]
+        
+        x1_num, x2_num = MojRK4(t_end, c, k, omega, F_value, krok[-1], position0, velocity0)
+
+        E_F[index] = np.max(np.abs(x1-x1_num))
+
+    plot_E_F(E_F,F)
+
 
 
 def system(t, stan, c, k, F, omega):
@@ -194,6 +228,22 @@ def plot_E(E,krok,metoda):
     plt.savefig(path, bbox_inches='tight')
     plt.close()
     return 0
+
+def plot_E_F(E,F):
+    plt.figure(figsize=(10, 6))
+    plt.plot(F, E, linestyle='-')
+    plt.xlabel('wymuszenie F')
+    plt.ylabel('blad E')
+
+    plt.grid(True, linestyle='--', alpha=0.7)
+    plt.title(f'wykres błędu bezwzględnego E od wymuszenia F')
+
+    opis = 'wykres_bledu_F.png'
+    path = 'wykresy_F/' + opis
+    plt.savefig(path, bbox_inches='tight')
+    plt.close()
+    return 0
+
 
 def plot_phaseplane(x, dx_dt):
     plt.figure(figsize=(10, 6))
